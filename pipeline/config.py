@@ -2,11 +2,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environmental/runtime variables from .env file
 load_dotenv()
 
-# -------- Runtime Variables (Pulled from Environment) -------------
-# Using fallback defaults in case they aren't set in the .env file
+# -------- env variables -------------
+# fallbacks in case they aren't set in the .env file
 day_env = os.getenv("DAY")
 DAY: int | None = int(day_env) if day_env else None
 SUB_FOLDER_NAME: str = os.getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
@@ -19,7 +18,7 @@ TEST_FILE: str = "output.xlsx"
 OUTPUT_FILE: str = "fsrm_consolidated.xlsx"
 
 
-# -------- column structures & Logic Constants  -------------
+# -------- column structures & logic  -------------
 COLUMNS_TO_READ: list[int] = [1, 2, 3, 4, 17, 18, 13, 14]
 
 ASSIGN_COLUMN_MAPPING: dict[str, str] = {
