@@ -15,7 +15,7 @@ MASTER_DIM_FILE: str = os.getenv("MASTER_DIM_FILE", "master_dim.xlsx")
 SP_SYNC_PATH: str = os.getenv("SP_SYNC_PATH", "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC")
 
 TEST_FILE: str = "output.xlsx"
-OUTPUT_FILE: str = "fsrm_consolidated.xlsx"
+OUTPUT_FILE: str = "FSRM_consolidated.xlsx"
 
 
 # -------- column structures & logic  -------------
