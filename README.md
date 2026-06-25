@@ -21,7 +21,7 @@ Ensure **uv** is installed on your system.
 
 4. Execute the main script:
     ```bash
-    uv sync
+    uv run main.py
 
 
 
