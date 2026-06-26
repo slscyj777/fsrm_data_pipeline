@@ -7,14 +7,14 @@ from pipeline.extract import extract_sermsuk_data
 
 def create_mock_excel(path: Path, sheet_name: str):
     df = pl.DataFrame({
-        "column_0": ["data1", "data2", "", "", "จิง"],
-        "column_1": ["val1", "val2", " ", "", ""],
-        "column_2": ["val3", "val4", " ", "", ""],
-        "column_8": ["val3", "val4","   ", "", ""],
-        "column_4": ["val3", "val4", "", "", "zzz"],
-        "column_5": ["val3", "val4"," ", "", ""],
-        "column_6": ["val3", "val4", " ", "", ""],
-        "column_7": ["val3", "val4","", "", "xyz"]
+        "column_1": ["data1", "data2", "", "", "จิง"],
+        "column_2": ["val1", "val2", " ", "", ""],
+        "column_3": ["val3", "val4", " ", "", ""],
+        "column_4": ["val3", "val4","   ", "", ""],
+        "column_5": ["val3", "val4", "", "", "zzz"],
+        "column_6": ["val3", "val4"," ", "", ""],
+        "column_7": ["val3", "val4", " ", "", ""],
+        "column_8": ["val3", "val4","", "", "xyz"]
     })
     df.write_excel(path, worksheet=sheet_name)
 
@@ -125,3 +125,4 @@ class TestExtractSermsukData:
             
             # 2 files * 2 valid rows per mock file = 4 expected rows
             assert result_df.shape == (4, 12)
+        #note race condition mem misallocation bug to fix

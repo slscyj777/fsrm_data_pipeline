@@ -1,4 +1,6 @@
 from datetime import date
+import argparse
+import polars as pl
 import os
 from pathlib import Path
 import time
@@ -17,8 +19,12 @@ from pipeline.config import (
     SUB_FOLDER_NAME,
     SFC_RENAME_MAPPING,
     SP_SYNC_PATH,
+    BEER_FORECAST_FILE,
+    SPIRITS_FORECAST_FILE,
+    BEER_COLUMNS_TO_READ,
+    SPIRITS_COLUMNS_TO_READ,
 )
-# ETL stages
+# stages
 from pipeline.extract import (
     extract_SFC_data,
     extract_sermsuk_TBL_mapping,
@@ -57,90 +63,115 @@ start_time = time.perf_counter()
 print(f"\n{UI.BOLD}{UI.CYAN}Starting...{UI.RESET}\n")
 
 
-try:
+def run_pipeline(steps: list[str] = ["all"]) -> None:
+    """
+    Initialize all file paths, then run compute steps, followed by saving to a parquet cache, before saving cache to backup csv, reading that updated csv and loading updated data into excel. Each segment broken into arg blocks that can be called by parsing the arg name specified when running the code using --step"
+    """
+    start_time = time.perf_counter()
+    requested_steps = set(steps)
+    print(f"\n{UI.BOLD}{UI.CYAN}Starting pipeline (Step: {steps})...{UI.RESET}\n")
+
+  
     PROJECT_ROOT = Path(__file__).resolve().parent
     input_path = PROJECT_ROOT / "excel" / "input" / MASTER_DIM_FILE
-
+    beer_path = PROJECT_ROOT / "excel" / "input" / BEER_FORECAST_FILE
+    spirits_path = PROJECT_ROOT / "excel" / "input" / SPIRITS_FORECAST_FILE
     SP_ROOT = Path.home() / SP_SYNC_PATH
 
     if not SP_ROOT.exists():
         raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
 
     sub_folder = SP_ROOT / SUB_FOLDER_NAME
-
-    #output_path = PROJECT_ROOT/ "excel" / "output" / TEST_FILE
     output_path = SP_ROOT / FSRM_FOLDER / OUTPUT_FILE
 
     today = date.today()
     filename = f"FSRM_consolidated_{today.strftime('%B')}_{today.year}.csv"
     csv_file_path = PROJECT_ROOT / "data" / filename
+    cache_file_path = PROJECT_ROOT / "data" / "temp_transformed.parquet"
 
+    df = None
 
-    UI.step_start("Extracting and transforming data...")
+    if "all" in requested_steps or "transform" in requested_steps:
+        UI.step_start("Extracting and transforming data...")
 
-    #=================================================================================
+        df_mapping = extract_sermsuk_TBL_mapping(input_path)
 
-    df_mapping = extract_sermsuk_TBL_mapping(input_path)
+        df_beer = extract_SFC_data(
+            beer_path, 
+            columns_to_read=BEER_COLUMNS_TO_READ,
+            rename_map=SFC_RENAME_MAPPING 
+        )
 
-    df_beer = extract_SFC_data(
-        "excel/input/FSRM_Beer Sales Forecasting_July 2026.xlsx", 
-        columns_to_read=[6, 7, 11, 13],
-        rename_map=SFC_RENAME_MAPPING 
-    )
+        df_spirits = extract_SFC_data(
+            spirits_path, 
+            columns_to_read=SPIRITS_COLUMNS_TO_READ,
+            rename_map=SFC_RENAME_MAPPING
+        )
 
-    df_spirits = extract_SFC_data(
-        "excel/input/FSRM_Spirits Sales Forecasting_July 2026.xlsx", 
-        columns_to_read=[5, 8, 12, 14],
-        rename_map=SFC_RENAME_MAPPING
-    )
+        df_SFC = transform_consolidate_forecasts(df_beer, df_spirits)
 
-    df_SFC = transform_consolidate_forecasts(df_beer, df_spirits)
-
-    df = (extract_sermsuk_data(
-                            columns_to_read = COLUMNS_TO_READ
-                            ,sub_folder= sub_folder
-                            ,day = DAY
-                            )
-        .pipe(rename_normalize_stock_columns,column_mapping = ASSIGN_COLUMN_MAPPING
-                                    ,stock_columns = STOCK_COL
-                                    ,ship_columns = SHIP_COL
-                                    )
-        .pipe(validate_extracted_data, stock_columns = STOCK_COL
-            )
-        .pipe(total_stock_as_crates, stock_columns = STOCK_COL 
-            )
-        .pipe(total_shippment_as_crates, ship_columns = SHIP_COL 
-            )
-        .pipe(map_sermsuk_to_TBL_WH_select_columns
-            , mapping_df = df_mapping
-            , column_to_map = "branch_code"
-            , column_order = ASSIGN_COLUMN_ORDER)
-        .pipe(branch_code_to_int)
-        .pipe(map_forecast_to_daily, df_SFC)
+        df = (extract_sermsuk_data(
+                    columns_to_read = COLUMNS_TO_READ
+                    ,sub_folder= sub_folder
+                    ,day = DAY
+                    )
+            .pipe(rename_normalize_stock_columns,column_mapping = ASSIGN_COLUMN_MAPPING
+                                                ,stock_columns = STOCK_COL
+                                                ,ship_columns = SHIP_COL
+                                                )
+            .pipe(validate_extracted_data, stock_columns = STOCK_COL)
+            .pipe(total_stock_as_crates, stock_columns = STOCK_COL)
+            .pipe(total_shippment_as_crates, ship_columns = SHIP_COL)
+            .pipe(map_sermsuk_to_TBL_WH_select_columns
+                , mapping_df = df_mapping
+                , column_to_map = "branch_code"
+                , column_order = ASSIGN_COLUMN_ORDER)
+            .pipe(branch_code_to_int)
+            .pipe(map_forecast_to_daily, df_SFC)
         ) 
 
-    UI.step_done("Data extracted and transformed successfully.")
-    #print(df.head)
+        # localized caching layer
+        cache_file_path.parent.mkdir(exist_ok=True)
+        df.write_parquet(cache_file_path)
+        UI.step_done("Data extracted and transformed successfully.")
 
-    UI.step_start("Updating CSV backup...")
 
-    check_and_load_to_backup(df, csv_file_path= csv_file_path)
+    if "all" in requested_steps or "backup" in requested_steps:
+        UI.step_start("Updating CSV backup...")
+        
+        # load from intermediate cache if performing a partial execution
+        if df is None:
+            if not cache_file_path.exists():
+                raise FileNotFoundError("Cache missing. Run the 'transform' step first to build cache.")
+            df = pl.read_parquet(cache_file_path)
 
-    UI.step_done("                           ")
+        check_and_load_to_backup(df, csv_file_path=csv_file_path)
+        UI.step_done("Backup updated/skipped successfully.")
 
-    UI.step_start(f"Loading data into Excel ({output_path.name})")
 
-    load_to_excel(output_file= output_path, table_name= 'raw', csv_file_path = csv_file_path)
+    if "all" in requested_steps or "excel" in requested_steps:
+        UI.step_start(f"Loading data into Excel ({output_path.name})")
 
-    #=================================================================================
-
-    UI.step_done(f"Excel file ready                                                 ")
-
+        load_to_excel(output_file=output_path, table_name='raw', csv_file_path=csv_file_path)
+        UI.step_done("Excel file ready                                      ")
 
     end_time = time.perf_counter()
     print(f"\n{UI.BOLD}{UI.CYAN}success {UI.RESET}")
     print("----------------------------")
     print(f"Execution time: {end_time - start_time:.2f} seconds")
 
-except Exception as e:
-    UI.step_start(f"Pipeline terminated due to system error: {str(e)}")   
+  
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="FSRM Data Pipeline Orchestrator")
+    parser.add_argument(
+        "--steps",  
+        nargs="+",  
+        default=["all"],
+        choices=["all", "transform", "backup", "excel"],
+        help="Specify one or more pipeline slices to execute (e.g., --steps backup excel)"
+    )
+    args = parser.parse_args()
+    
+    run_pipeline(steps=args.steps)

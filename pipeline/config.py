@@ -14,12 +14,22 @@ FSRM_FOLDER: str = os.getenv("FSRM_FOLDER", "FSRM_files")
 MASTER_DIM_FILE: str = os.getenv("MASTER_DIM_FILE", "master_dim.xlsx")
 SP_SYNC_PATH: str = os.getenv("SP_SYNC_PATH", "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC")
 
+BEER_FORECAST_FILE: str = os.getenv("BEER_FORECAST_FILE", "FSRM_Beer Sales Forecasting_July 2026.xlsx")
+
+SPIRITS_FORECAST_FILE: str = os.getenv("SPIRITS_FORECAST_FILE", "FSRM_Spirits Sales Forecasting_July 2026.xlsx")
+
+OUTPUT_FILE: str = os.getenv("OUTPUT_FILE", "FSRM_consolidated.xlsx")
+
 TEST_FILE: str = "output.xlsx"
-OUTPUT_FILE: str = "FSRM_consolidated.xlsx"
+
 
 
 # -------- column structures & logic  -------------
 COLUMNS_TO_READ: list[int] = [1, 2, 3, 4, 17, 18, 13, 14]
+
+BEER_COLUMNS_TO_READ: list[int] = [6, 7, 11, 13]
+
+SPIRITS_COLUMNS_TO_READ: list[int] = [5, 8, 12, 14]
 
 ASSIGN_COLUMN_MAPPING: dict[str, str] = {
     "column_1": "SKU",

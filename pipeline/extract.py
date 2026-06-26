@@ -34,7 +34,10 @@ def _process_single_sermsuk_file(
         drop_empty_cols=False,
         drop_empty_rows=False,
         has_header=has_header,
-        schema_overrides= {"column_4": pl.String
+        schema_overrides= {"column_1": pl.String
+                            ,"column_2": pl.String
+                            ,"column_3": pl.String
+                            ,"column_4": pl.String
                             ,"column_5": pl.String
                             ,"column_6": pl.String
                             ,"column_7": pl.String
@@ -64,7 +67,7 @@ def extract_sermsuk_data(
     files: int = 50,
     has_header: bool = False
 ) -> pl.DataFrame:
-    """Orchestrator: Loops through target directory and compiles the final dataframe."""
+    """Loops through target directory and compiles the final dataframe, processing each file using the helper functions above."""
     target_day = day if day is not None else date.today().day
     extracted_date = date.today().replace(day=target_day)
 

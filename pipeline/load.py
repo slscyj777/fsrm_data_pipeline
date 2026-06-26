@@ -6,7 +6,7 @@ from pathlib import Path
 
 def check_duplicate_dates(existing_df: pl.DataFrame, new_df: pl.DataFrame) -> bool:
     '''
-    helper function to check if data from that day is already in backup
+    helper: check if data from that day is already in backup
     '''
     existing_dates = existing_df["stock_date"].cast(pl.String)
     
@@ -21,7 +21,6 @@ def check_and_load_to_backup(df: pl.DataFrame, csv_file_path: Path) -> None:
     '''
     check if csv backup for that month exists, if no, create file and save data, if yes, append data to the end of existing file. if data with the same date already exists, skip saving data to prevent duplicate data
     '''
-    csv_file_path.parent.mkdir(exist_ok=True)
 
     if not csv_file_path.exists():
         df.write_csv(csv_file_path, separator=",", float_precision=1)
