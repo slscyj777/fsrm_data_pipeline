@@ -8,6 +8,8 @@ load_dotenv()
 # fallbacks in case they aren't set in the .env file
 day_env = os.getenv("DAY")
 DAY: int | None = int(day_env) if day_env else None
+month_env = os.getenv("MONTH")
+MONTH: int | None = int(month_env) if month_env else None
 SUB_FOLDER_NAME: str = os.getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
 FSRM_FOLDER: str = os.getenv("FSRM_FOLDER", "FSRM_files")
 

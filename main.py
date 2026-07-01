@@ -13,6 +13,7 @@ from pipeline.config import (
     DAY,
     FSRM_FOLDER,
     MASTER_DIM_FILE,
+    MONTH,
     OUTPUT_FILE,
     SHIP_COL,
     STOCK_COL,
@@ -77,10 +78,13 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
     if not SP_ROOT.exists():
         raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
 
-    sub_folder = SP_ROOT / SUB_FOLDER_NAME
+    sub_folder = SP_ROOT / SUB_FOLDER_NAME / "1.มิ.ย.2026"
     output_path = SP_ROOT / FSRM_FOLDER / OUTPUT_FILE
 
-    today = date.today()
+    if MONTH is None:
+        today = date.today()
+    else:
+        today = date.today().replace(month=MONTH)
     filename = f"FSRM_consolidated_{today.strftime('%B')}_{today.year}.csv"
     csv_file_path = PROJECT_ROOT / "data" / filename
     cache_file_path = PROJECT_ROOT / "data" / "temp_transformed.parquet"
@@ -110,6 +114,7 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
                     columns_to_read = COLUMNS_TO_READ
                     ,sub_folder= sub_folder
                     ,day = DAY
+                    ,month = MONTH
                     ,rows_to_read= 150
                     )
             .pipe(rename_normalize_stock_columns,column_mapping = ASSIGN_COLUMN_MAPPING

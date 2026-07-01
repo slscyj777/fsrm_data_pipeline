@@ -39,6 +39,7 @@ def extract_sermsuk_data(
     columns_to_read: list[int],
     sub_folder: Path, 
     day: int | None = None,
+    month: int | None = None,
     rows_to_read: int = 80,
     rows_to_skip: int = 5,
     files: int = 50,
@@ -46,8 +47,8 @@ def extract_sermsuk_data(
 ) -> pl.DataFrame:
     """folder scanning and execution"""
     target_day = day if day is not None else date.today().day
-    extracted_date = date.today().replace(day=target_day)
-
+    target_month = month if month is not None else date.today().month
+    extracted_date = date.today().replace(day=target_day, month=target_month)
     if not (sub_folder.exists() and sub_folder.is_dir()):
         raise NameError("Wrong folder name or folder not exists.")
 
