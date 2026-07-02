@@ -18,9 +18,11 @@ def rename_normalize_stock_columns(df: pl.DataFrame
     return df
 
 
-def branch_code_to_int(df: pl.DataFrame)-> pl.DataFrame:
-
-    return (df.with_columns(pl.col("branch_code").cast(pl.Int64)))
+def map_base_unit_to_sku(df: pl.DataFrame, sku_df: pl.DataFrame) -> pl.DataFrame:
+    '''
+    This function maps the base unit to the main dataframe based on the SKU column.
+    '''
+    return df.join(sku_df, on="SKU", how="left") 
 
 
 def total_stock_as_crates(df: pl.DataFrame, stock_columns: list[str]) -> pl.DataFrame:
@@ -65,22 +67,27 @@ def total_shippment_as_crates(df: pl.DataFrame, ship_columns: list[str]) -> pl.D
             for col in ship_columns
                 )
 
-    return df       
+    return df     
 
 
 def map_sermsuk_to_TBL_WH_select_columns(df: pl.DataFrame
                                          , mapping_df: pl.DataFrame
                                          , column_to_map: str | list[str]
-                                         , column_order: list[str]) -> pl.DataFrame:
+                                         ) -> pl.DataFrame:
     '''
     map tbl WH to sermsuk branch, rearrange and select final set of columns to save 
     '''
 
     return df.join(
         mapping_df, on = column_to_map, how= "left"
-        ).select(
+        )
+
+def rearrange_columns(df: pl.DataFrame, column_order: list[str]) -> pl.DataFrame:
+
+    return df.select(
             pl.col(column_order)
         )
+
     
 def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFrame) -> pl.DataFrame:
     """gets branch code and combines beer and spirits metrics and groups same fields."""
@@ -92,6 +99,11 @@ def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFr
         .group_by(["SKU", "branch_code", "category"])
         .agg(pl.col("forecast").sum())
     )
+
+def branch_code_to_int(df: pl.DataFrame)-> pl.DataFrame:
+
+    return (df.with_columns(pl.col("branch_code").cast(pl.Int64)))
+
 
 def map_forecast_to_daily(daily_df: pl.DataFrame, forecast_df: pl.DataFrame) -> pl.DataFrame:
     """Joins the consolidated forecast dataset directly onto the current day's output dataframe."""

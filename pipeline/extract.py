@@ -8,7 +8,7 @@ def _parse_filename_metadata(filename: str) -> tuple[str, str, str]:
     """Helper: Extracts code, region, and branch name from the specific file format."""
     parts = filename.split("_", 3)
     if len(parts) != 4:
-        raise SyntaxError(f"Wrong file name format, rename {filename}.")
+        raise ValueError(f"Wrong file name format, rename {filename}.")
     
     code, region, _, name = parts
     return code, region, name[5:]
@@ -48,9 +48,15 @@ def extract_sermsuk_data(
     """folder scanning and execution"""
     target_day = day if day is not None else date.today().day
     target_month = month if month is not None else date.today().month
-    extracted_date = date.today().replace(day=target_day, month=target_month)
+    try:
+        extracted_date = date.today().replace(day=target_day, month=target_month)
+    except ValueError as e:
+        raise ValueError(f"Invalid day/month combination: day={target_day}, month={target_month}") from e
     if not (sub_folder.exists() and sub_folder.is_dir()):
-        raise NameError("Wrong folder name or folder not exists.")
+        print(f"check {sub_folder}")
+        print(f"Folder exists: {sub_folder.exists()}")
+        print(f"Is directory: {sub_folder.is_dir()}")
+        raise ValueError("Wrong folder name or folder not exists.")
 
     df_list = []
     
@@ -91,17 +97,17 @@ def extract_sermsuk_data(
     return final_df
 
 
-def extract_sermsuk_TBL_mapping(file_name: Path | str) -> pl.DataFrame:
+def extract_sermsuk_TBL_mapping(file_name: Path | str,sheet_name: str) -> pl.DataFrame:
 
     '''This function finds and extract data from the master_dim file'''
 
 
-    df = pl.read_excel(file_name, engine='calamine', has_header = True, sheet_name= "warehouse")
+    df = pl.read_excel(file_name, engine='calamine', has_header = True, sheet_name= sheet_name)
     
     return df
 
 
-def extract_SFC_data(file_path: str | Path, columns_to_read: list[int], rename_map: dict[str, str] )-> pl.DataFrame:
+def extract_sfc_data(file_path: str | Path, columns_to_read: list[int], rename_map: dict[str, str])-> pl.DataFrame:
     
     return (
         pl.read_excel(
@@ -113,14 +119,27 @@ def extract_SFC_data(file_path: str | Path, columns_to_read: list[int], rename_m
         )
         .rename(rename_map)
     )
-     
+
+def extract_sku_data(file_path: str | Path, columns_to_read: list[int], rename_map: dict[str, str], sheet_name: str  )-> pl.DataFrame:
     
-    
+    return (
+        pl.read_excel(
+            file_path,
+            sheet_name=sheet_name,
+            engine="calamine",
+            columns=columns_to_read,
+            has_header=False,
+            read_options={"skip_rows": 1},
+            schema_overrides={"column_2": pl.Float64}
+        )
+        .rename(rename_map)
+    )
+
      
 
 
 
-def validate_extracted_data(df: pl.DataFrame, stock_columns: list[str]) -> pl.DataFrame:
+def validate_extracted_data(df: pl.DataFrame) -> pl.DataFrame:
 
     '''This function does some checks to make sure that there are no empty cells in some of the columns that are supposed to have values. Able to add more checks in the future'''
 
@@ -134,10 +153,6 @@ def validate_extracted_data(df: pl.DataFrame, stock_columns: list[str]) -> pl.Da
     null_violations = {col: rows for col, rows in null_violations.items() if rows > 0}
     if null_violations:
         raise ValueError(f"Null values found in required fields: {null_violations}")
-
-    # for col in stock_columns:
-    #     if df[col].dtype != pl.Float64:
-    #         raise ValueError(f"Expected {col} to be Float64 after normalization, got {df[col].dtype}")
     
     return df
 

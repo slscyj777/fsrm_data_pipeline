@@ -76,11 +76,11 @@ class TestExtractSermsukData:
         day = 15
         sub_folder = tmp_path / test_case.folder_name
         
-        # Only create the folder if the test doesn't explicitly test for missing directories
+  
         if test_case.folder_name != "does_not_exist":
             sub_folder.mkdir()
             
-        # Dynamically create mock files required for the current test case
+        # create mock files required for the current test case
         for filename in test_case.files_to_create:
             file_path = sub_folder / filename
             create_mock_excel(file_path, sheet_name=str(day))
