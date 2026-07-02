@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 import argparse
 import polars as pl
 import os
 from pathlib import Path
 import time
+import uuid
 
 # Pipeline Config
 from pipeline.config import (
@@ -85,9 +86,13 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
         today = date.today()
     else:
         today = date.today().replace(month=MONTH)
+
     filename = f"FSRM_consolidated_{today.strftime('%B')}_{today.year}.csv"
     csv_file_path = PROJECT_ROOT / "data" / filename
-    cache_file_path = PROJECT_ROOT / "data" / "temp_transformed.parquet"
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    unique_id = uuid.uuid4().hex[:8]
+    cache_file_path = PROJECT_ROOT / "data" / f"temp_transformed_{timestamp}_{unique_id}.parquet"
 
     df = None
 
