@@ -11,6 +11,7 @@ def rename_normalize_stock_columns(df: pl.DataFrame
     df = df.rename(column_mapping).with_columns(
                 pl.col(col).str.strip_chars()
                 .replace(["-", "", " "], ["0", "0", "0"])
+                .fill_null("0")
                 .cast(pl.Float64) 
                 for col in stock_columns + ship_columns
     )

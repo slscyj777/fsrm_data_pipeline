@@ -148,7 +148,7 @@ def validate_extracted_data(df: pl.DataFrame) -> pl.DataFrame:
 
     null_violations = {
         col: df.filter(pl.col(col).is_null()).height
-        for col in ["branch_code", "region", "sermsuk_branch_name", "SKU", "base_unit_bottle"]
+        for col in ["branch_code", "region", "sermsuk_branch_name", "SKU", "base_unit_bottle", "stock_case", "stock_bottle", "shippment_case", "shippment_bottle"]
     }
     null_violations = {col: rows for col, rows in null_violations.items() if rows > 0}
     if null_violations:
