@@ -125,7 +125,7 @@ def extract_sku_data(file_path: str | Path, columns_to_read: list[int], rename_m
             columns=columns_to_read,
             has_header=False,
             read_options={"skip_rows": 1},
-            schema_overrides={"column_2": pl.Float64}
+            schema_overrides={"column_3": pl.Float64}
         )
         .rename(rename_map)
     )

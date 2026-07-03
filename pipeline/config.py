@@ -36,7 +36,7 @@ BEER_COLUMNS_TO_READ: list[int] = [6, 7, 11, 13]
 
 SPIRITS_COLUMNS_TO_READ: list[int] = [5, 8, 12, 14]
 
-SKU_COLUMNS_TO_READ: list[int] = [3, 21]
+SKU_COLUMNS_TO_READ: list[int] = [3, 5, 21]
 
 ASSIGN_COLUMN_MAPPING: dict[str, str] = {
     "column_1": "SKU",
@@ -56,12 +56,13 @@ SFC_RENAME_MAPPING: dict[str, str] = {
 
 SKU_RENAME_MAPPING: dict[str, str] = {
     "column_1": "SKU",
-    "column_2": "base_unit_bottle"
+    "column_2": "brand",
+    "column_3": "base_unit_bottle"
 }
 
 ASSIGN_COLUMN_ORDER: list[str] = [
     'branch_code', 'region', 'region_TBL', 'warehouse_name_TBL',
-    'sermsuk_branch_name', 'SKU', 'description', 
+    'sermsuk_branch_name', 'SKU', 'description', "brand", 
     'base_unit_bottle', 'stock_case', 'stock_bottle', 'stock_date', 
     'ending_stock_case', "act_shippment_case"
 ]

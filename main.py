@@ -120,7 +120,7 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
     df = None
 
     if "all" in requested_steps or "transform" in requested_steps:
-        print(f"Extracting and transforming data from {sub_folder.name}...")
+        print(f"Extracting and transforming data from {sub_folder.name}, day: {target_day}")
 
         df_mapping = extract_sermsuk_TBL_mapping(input_path, sheet_name="warehouse")
 
