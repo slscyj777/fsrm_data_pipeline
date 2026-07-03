@@ -1,3 +1,4 @@
+from calendar import month_abbr
 from datetime import date, datetime
 import argparse
 import polars as pl
@@ -15,6 +16,7 @@ from pipeline.config import (
     FSRM_FOLDER,
     MASTER_DIM_FILE,
     MONTH,
+    YEAR,
     OUTPUT_FILE,
     SHIP_COL,
     STOCK_COL,
@@ -65,12 +67,6 @@ def validate_env_vars() -> None:
         raise EnvironmentError(
             f"Missing/empty .env variable(s): {', '.join(missing)}. Check your .env file."
         )
-    
-def resolve_target_date(month: int | None) -> date:
-    try:
-        return date.today() if month is None else date.today().replace(month=month)
-    except ValueError as e:
-        raise ValueError(f"Invalid MONTH in .env: {month}") from e
 
 CYAN = '\033[96m'
 GREEN = '\033[92m'
@@ -79,7 +75,7 @@ RESET = '\033[0m'
 BOLD = '\033[1m'
 
 def step_start(message):
-    print(f"{YELLOW}[ ... ]{RESET} {message}", end="\r", flush=True)
+    print(f"{YELLOW}[...]{RESET} {message}", end="\r", flush=True)
 
 def step_done(message):
     print(f"\033[K{GREEN}[OK]{RESET} {message}")
@@ -103,13 +99,20 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
 
     if not SP_ROOT.exists():
         raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
+    
+    target_day = DAY if DAY is not None else date.today().day
+    target_month = MONTH if MONTH is not None else date.today().month
+    target_year = YEAR if YEAR is not None else date.today().year
+    try:
+        stock_date = date(day=target_day, month=target_month, year=target_year)
+    except ValueError as e:
+        raise ValueError(f"Invalid date combination: day={target_day}, month={target_month}, year={target_year}") from e
 
-    sub_folder = SP_ROOT / SUB_FOLDER_NAME / "6_Jun_2026"
+    sub_folder = SP_ROOT / SUB_FOLDER_NAME /  f"{target_month}_{month_abbr[target_month]}_{target_year}"
     output_path = SP_ROOT / FSRM_FOLDER / OUTPUT_FILE
 
-    target_date = resolve_target_date(MONTH)
 
-    filename = f"FSRM_consolidated_{target_date.strftime('%B')}_{target_date.year}.csv"
+    filename = f"FSRM_consolidated_{stock_date.strftime('%B')}_{stock_date.year}.csv"
     csv_file_path = PROJECT_ROOT / "data" / filename
 
     cache_file_path = PROJECT_ROOT / "data" / f"temp_transformed.parquet"
@@ -117,7 +120,7 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
     df = None
 
     if "all" in requested_steps or "transform" in requested_steps:
-        step_start("Extracting and transforming data...")
+        print(f"Extracting and transforming data from {sub_folder.name}...")
 
         df_mapping = extract_sermsuk_TBL_mapping(input_path, sheet_name="warehouse")
 
@@ -145,8 +148,8 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
         df = (extract_sermsuk_data(
                     columns_to_read = COLUMNS_TO_READ
                     ,sub_folder= sub_folder
-                    ,day = DAY
-                    ,month = MONTH
+                    ,day = target_day
+                    ,stock_date=stock_date
                     ,rows_to_read= 180
                     )
             .pipe(rename_normalize_stock_columns,column_mapping = ASSIGN_COLUMN_MAPPING

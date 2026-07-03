@@ -1,6 +1,7 @@
 import polars as pl
 from datetime import date
 from pathlib import Path
+from calendar import month_abbr
 #from config import FOLDER_PATH, COLUMNS_TO_READ
 
 
@@ -37,21 +38,15 @@ def clean_sermsuk_dataframe(
 
 def extract_sermsuk_data(
     columns_to_read: list[int],
-    sub_folder: Path, 
+    sub_folder: Path,
+    stock_date: date, 
     day: int | None = None,
-    month: int | None = None,
     rows_to_read: int = 80,
     rows_to_skip: int = 5,
     files: int = 50,
     has_header: bool = False
 ) -> pl.DataFrame:
     """folder scanning and execution"""
-    target_day = day if day is not None else date.today().day
-    target_month = month if month is not None else date.today().month
-    try:
-        extracted_date = date.today().replace(day=target_day, month=target_month)
-    except ValueError as e:
-        raise ValueError(f"Invalid day/month combination: day={target_day}, month={target_month}") from e
     if not (sub_folder.exists() and sub_folder.is_dir()):
         print(f"check {sub_folder}")
         print(f"Folder exists: {sub_folder.exists()}")
@@ -72,7 +67,7 @@ def extract_sermsuk_data(
         
         raw_df = pl.read_excel(
             file,
-            sheet_name=str(target_day),
+            sheet_name=str(day),
             engine='calamine',
             columns=columns_to_read,
             read_options={"n_rows": rows_to_read, "skip_rows": rows_to_skip},
@@ -83,7 +78,7 @@ def extract_sermsuk_data(
         )
         
         
-        cleaned_df = clean_sermsuk_dataframe(raw_df, code, region, branch_name, extracted_date)
+        cleaned_df = clean_sermsuk_dataframe(raw_df, code, region, branch_name, stock_date)
         
         df_list.append(cleaned_df)
         print(f"Concatenated file: {file.name}, files in dir: {index}")

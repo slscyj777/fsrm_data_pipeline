@@ -10,6 +10,8 @@ day_env = os.getenv("DAY")
 DAY: int | None = int(day_env) if day_env else None
 month_env = os.getenv("MONTH")
 MONTH: int | None = int(month_env) if month_env else None
+year_env = os.getenv("YEAR")
+YEAR: int | None = int(year_env) if year_env else None
 SUB_FOLDER_NAME: str = os.getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
 FSRM_FOLDER: str = os.getenv("FSRM_FOLDER", "FSRM_files")
 

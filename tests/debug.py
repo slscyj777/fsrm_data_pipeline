@@ -10,18 +10,4 @@ print("Starting...")
 
 DAY = [12]
 
-for day in DAY: 
 
-
-    df_mapping = extract_sermsuk_TBL_mapping(MASTER_DIM_FILE)
-
-
-    df = (extract_sermsuk_data(
-                            columns_to_read = COLUMNS_TO_READ
-                            ,day = day
-                            ,sub_folder= Path(SUB_FOLDER_NAME)
-                            ))
-
-
-    #print(df.head)
-    df.write_excel("test.xlsx")
