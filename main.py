@@ -1,35 +1,25 @@
 from calendar import month_abbr
-from datetime import date, datetime
+from datetime import date
 import argparse
+from dotenv import load_dotenv
+from os import getenv
 import polars as pl
-import os
 from pathlib import Path
 import time
-import uuid
+
 
 # Pipeline Config
 from pipeline.config import (
     ASSIGN_COLUMN_MAPPING,
     ASSIGN_COLUMN_ORDER,
     COLUMNS_TO_READ,
-    DAY,
-    FSRM_FOLDER,
-    MASTER_DIM_FILE,
-    MONTH,
-    YEAR,
-    OUTPUT_FILE,
     SHIP_COL,
     STOCK_COL,
-    SUB_FOLDER_NAME,
     SFC_RENAME_MAPPING,
-    SP_SYNC_PATH,
-    BEER_FORECAST_FILE,
-    SPIRITS_FORECAST_FILE,
     BEER_COLUMNS_TO_READ,
     SPIRITS_COLUMNS_TO_READ,
     SKU_COLUMNS_TO_READ,
     SKU_RENAME_MAPPING,
-    SKU_DIM_FILE,
 )
 # stages
 from pipeline.extract import (
@@ -91,6 +81,31 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
 
   
     PROJECT_ROOT = Path(__file__).resolve().parent
+    env_path = PROJECT_ROOT / '.env'
+
+    load_dotenv(dotenv_path=env_path)
+
+    # -------- env variables -------------
+    # fallbacks in case they aren't set in the .env file
+    day_env = getenv("DAY")
+    DAY: int | None = int(day_env) if day_env else None
+    month_env = getenv("MONTH")
+    MONTH: int | None = int(month_env) if month_env else None
+    year_env = getenv("YEAR")
+    YEAR: int | None = int(year_env) if year_env else None
+    SUB_FOLDER_NAME: str = getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
+    FSRM_FOLDER: str = getenv("FSRM_FOLDER", "FSRM_files")
+
+    MASTER_DIM_FILE: str = getenv("MASTER_DIM_FILE", "master_dim.xlsx")
+    SKU_DIM_FILE: str = getenv("SKU_DIM_FILE", "DIM_SKU.xlsx")
+    SP_SYNC_PATH: str = getenv("SP_SYNC_PATH", "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC")
+
+    BEER_FORECAST_FILE: str = getenv("BEER_FORECAST_FILE", "FSRM_Beer Sales Forecasting_July 2026.xlsx")
+
+    SPIRITS_FORECAST_FILE: str = getenv("SPIRITS_FORECAST_FILE", "FSRM_Spirits Sales Forecasting_July 2026.xlsx")
+
+    OUTPUT_FILE: str = getenv("OUTPUT_FILE", "FSRM_consolidated.xlsx")
+
     input_path = PROJECT_ROOT / "excel" / "input" / MASTER_DIM_FILE
     beer_path = PROJECT_ROOT / "excel" / "input" / BEER_FORECAST_FILE
     spirits_path = PROJECT_ROOT / "excel" / "input" / SPIRITS_FORECAST_FILE
@@ -99,6 +114,7 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
 
     if not SP_ROOT.exists():
         raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
+    
     
     target_day = DAY if DAY is not None else date.today().day
     target_month = MONTH if MONTH is not None else date.today().month
