@@ -1,14 +1,14 @@
 from calendar import month_abbr
 from datetime import date
 import argparse
-from dotenv import load_dotenv
-from os import getenv
 import polars as pl
 from pathlib import Path
 import time
 
 
 # Pipeline Config
+from pipeline.settings import load_settings
+
 from pipeline.config import (
     ASSIGN_COLUMN_MAPPING,
     ASSIGN_COLUMN_ORDER,
@@ -43,20 +43,13 @@ from pipeline.transform import (
 from pipeline.load import check_and_load_to_backup, load_to_excel
 
 
-REQUIRED_ENV_VARS = [
+REQUIRED_VARS = [
     "MASTER_DIM_FILE", "FORECAST_FILE",
     "SP_SYNC_PATH", "SUB_FOLDER_NAME", "FSRM_FOLDER", "OUTPUT_FILE","SKU_DIM_FILE",
     "COLUMNS_TO_READ", "ASSIGN_COLUMN_MAPPING", "STOCK_COL", "SHIP_COL",
     "ASSIGN_COLUMN_ORDER", "BEER_COLUMNS_TO_READ", "SPIRITS_COLUMNS_TO_READ",
     "SFC_RENAME_MAPPING","SKU_COLUMNS_TO_READ","SKU_RENAME_MAPPING",
 ]
-
-def validate_env_vars() -> None:
-    missing = [name for name in REQUIRED_ENV_VARS if globals().get(name) in (None, "")]
-    if missing:
-        raise EnvironmentError(
-            f"Missing/empty .env variable(s): {', '.join(missing)}. Check your .env file."
-        )
 
 CYAN = '\033[96m'
 GREEN = '\033[92m'
@@ -81,25 +74,25 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
 
   
     PROJECT_ROOT = Path(__file__).resolve().parent
-    env_path = PROJECT_ROOT / '.env'
+    settings = load_settings()
 
-    load_dotenv(dotenv_path=env_path, override=True)
-
-    # -------- env variables -------------
-    # fallbacks in case they aren't set in the .env file
+    # -------- json variables -------------
     target_day = day if day is not None else date.today().day
     target_month = month if month is not None else date.today().month
     target_year = year if year is not None else date.today().year
-    SUB_FOLDER_NAME: str = getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
-    FSRM_FOLDER: str = getenv("FSRM_FOLDER", "FSRM_files")
+    SUB_FOLDER_NAME = settings["SUB_FOLDER_NAME"]
+    FSRM_FOLDER = settings["FSRM_FOLDER"]
+    MASTER_DIM_FILE = settings["MASTER_DIM_FILE"]
+    SKU_DIM_FILE = settings["SKU_DIM_FILE"]
+    SP_SYNC_PATH = settings["SP_SYNC_PATH"]
+    FORECAST_FILE = settings["FORECAST_FILE"]
+    OUTPUT_FILE = settings["OUTPUT_FILE"]
 
-    MASTER_DIM_FILE: str = getenv("MASTER_DIM_FILE", "master_dim.xlsx")
-    SKU_DIM_FILE: str = getenv("SKU_DIM_FILE", "DIM_SKU.xlsx")
-    SP_SYNC_PATH: str = getenv("SP_SYNC_PATH", "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC")
-
-    FORECAST_FILE: str = getenv("FORECAST_FILE", "FSRM_Beer&Spirits Sales Forecasting_July 2026 (SOP Template).xlsx")
-
-    OUTPUT_FILE: str = getenv("OUTPUT_FILE", "FSRM_consolidated.xlsx")
+    missing = [key for key, value in settings.items() if not value]
+    if missing:
+        raise ValueError(
+            f"Missing/empty setting(s): {', '.join(missing)}. Check settings.json."
+        )
 
     input_path = PROJECT_ROOT / "excel" / "input" / MASTER_DIM_FILE
     forecast_path = PROJECT_ROOT / "excel" / "input" / FORECAST_FILE

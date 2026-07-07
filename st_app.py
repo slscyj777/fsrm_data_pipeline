@@ -5,8 +5,9 @@ from contextlib import redirect_stdout
 from datetime import date
 from pathlib import Path
 
+
 import streamlit as st
-from dotenv import dotenv_values, set_key
+from pipeline.settings import load_settings, save_settings
 
 from main import run_pipeline
 
@@ -14,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 ENV_PATH = PROJECT_ROOT / ".env"
 
 # label = help text shown next to each field; edit this dict to add/remove fields
-ENV_FIELDS = {
+SETTINGS_FIELDS = {
     "SUB_FOLDER_NAME": "SharePoint stock subfolder name",
     "FSRM_FOLDER": "FSRM output folder name",
     "SP_SYNC_PATH": "SharePoint sync path (eg. ******* Public Company Limited/**** **** - Stock FSRM SSC)",
@@ -43,23 +44,19 @@ class StreamlitLogger(io.StringIO):
 st.set_page_config(page_title="FSRM Pipeline", layout="centered")
 st.title("FSRM Data Pipeline")
 
-with st.expander("⚙️ Settings (.env)"):
-    current = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
+with st.expander("⚙️ Settings"):
+    current = load_settings()
     new_values = {
         key: st.text_input(key, value=current.get(key, ""), help=help_text)
-        for key, help_text in ENV_FIELDS.items()
+        for key, help_text in SETTINGS_FIELDS.items()
     }
     if st.button("Save settings"):
-        with st.status("Saving") as status: 
-            missing = [key for key, value in new_values.items() if not value]
-            if missing:
-                st.error(f"These fields cannot be empty: {', '.join(missing)}")
-            else:
-                ENV_PATH.touch(exist_ok=True)
-                for key, value in new_values.items():
-                    set_key(str(ENV_PATH), key, str(value))
-
-                status.update(label="Success!", state="complete")
+        missing = [key for key, value in new_values.items() if not value]
+        if missing:
+            st.error(f"These fields cannot be empty: {', '.join(missing)}")
+        else:
+            save_settings(new_values)
+            st.success("Success!")
 
 picked_date = st.date_input("Stock date to process", value=date.today())
 step_choice = st.multiselect(
@@ -80,7 +77,7 @@ if st.button("Run pipeline", type="primary", disabled=not step_choice):
                     month=picked_date.month,
                     year=picked_date.year,
                 )
-            status.update(label="Success!", state="complete")
+            status.update(label="Success!", state="complete", expanded=True)
         except Exception:
             log_stream.write("\n" + traceback.format_exc())
             status.update(label="Pipeline failed — see log below.", state="error", expanded=True)

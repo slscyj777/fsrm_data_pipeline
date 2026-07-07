@@ -1,0 +1,9 @@
+{
+    "SUB_FOLDER_NAME": "1.Stock FSRM SSC",
+    "FSRM_FOLDER": "FSRM_files",
+    "SP_SYNC_PATH": "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC",
+    "MASTER_DIM_FILE": "master_dim.xlsx",
+    "SKU_DIM_FILE": "DIM_SKU.xlsx",
+    "FORECAST_FILE": "FSRM_Beer_Spirits Sales Forecasting_July 2026 (SOP Template).xlsx",
+    "OUTPUT_FILE": "FSRM_consolidated.xlsx"
+}
