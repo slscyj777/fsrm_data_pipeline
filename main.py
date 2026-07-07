@@ -44,7 +44,7 @@ from pipeline.load import check_and_load_to_backup, load_to_excel
 
 
 REQUIRED_ENV_VARS = [
-    "MASTER_DIM_FILE", "BEER_FORECAST_FILE", "SPIRITS_FORECAST_FILE",
+    "MASTER_DIM_FILE", "FORECAST_FILE",
     "SP_SYNC_PATH", "SUB_FOLDER_NAME", "FSRM_FOLDER", "OUTPUT_FILE","SKU_DIM_FILE",
     "COLUMNS_TO_READ", "ASSIGN_COLUMN_MAPPING", "STOCK_COL", "SHIP_COL",
     "ASSIGN_COLUMN_ORDER", "BEER_COLUMNS_TO_READ", "SPIRITS_COLUMNS_TO_READ",
@@ -71,7 +71,7 @@ def step_done(message):
     print(f"\033[K{GREEN}[OK]{RESET} {message}")
 
 
-def run_pipeline(steps: list[str] = ["all"]) -> None:
+def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int | None = None, year: int | None = None) -> None:
     """
     Initialize all file paths, then run compute steps, followed by saving to a parquet cache, before saving cache to backup csv, reading that updated csv and loading updated data into excel. Each segment broken into arg blocks that can be called by parsing the arg name specified when running the code using --step"
     """
@@ -83,16 +83,13 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
     PROJECT_ROOT = Path(__file__).resolve().parent
     env_path = PROJECT_ROOT / '.env'
 
-    load_dotenv(dotenv_path=env_path)
+    load_dotenv(dotenv_path=env_path, override=True)
 
     # -------- env variables -------------
     # fallbacks in case they aren't set in the .env file
-    day_env = getenv("DAY")
-    DAY: int | None = int(day_env) if day_env else None
-    month_env = getenv("MONTH")
-    MONTH: int | None = int(month_env) if month_env else None
-    year_env = getenv("YEAR")
-    YEAR: int | None = int(year_env) if year_env else None
+    target_day = day if day is not None else date.today().day
+    target_month = month if month is not None else date.today().month
+    target_year = year if year is not None else date.today().year
     SUB_FOLDER_NAME: str = getenv("SUB_FOLDER_NAME", "1.Stock FSRM SSC")
     FSRM_FOLDER: str = getenv("FSRM_FOLDER", "FSRM_files")
 
@@ -100,25 +97,18 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
     SKU_DIM_FILE: str = getenv("SKU_DIM_FILE", "DIM_SKU.xlsx")
     SP_SYNC_PATH: str = getenv("SP_SYNC_PATH", "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC")
 
-    BEER_FORECAST_FILE: str = getenv("BEER_FORECAST_FILE", "FSRM_Beer Sales Forecasting_July 2026.xlsx")
-
-    SPIRITS_FORECAST_FILE: str = getenv("SPIRITS_FORECAST_FILE", "FSRM_Spirits Sales Forecasting_July 2026.xlsx")
+    FORECAST_FILE: str = getenv("FORECAST_FILE", "FSRM_Beer&Spirits Sales Forecasting_July 2026 (SOP Template).xlsx")
 
     OUTPUT_FILE: str = getenv("OUTPUT_FILE", "FSRM_consolidated.xlsx")
 
     input_path = PROJECT_ROOT / "excel" / "input" / MASTER_DIM_FILE
-    beer_path = PROJECT_ROOT / "excel" / "input" / BEER_FORECAST_FILE
-    spirits_path = PROJECT_ROOT / "excel" / "input" / SPIRITS_FORECAST_FILE
+    forecast_path = PROJECT_ROOT / "excel" / "input" / FORECAST_FILE
     sku_path = PROJECT_ROOT / "excel" / "input" / SKU_DIM_FILE
     SP_ROOT = Path.home() / SP_SYNC_PATH
 
     if not SP_ROOT.exists():
         raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
     
-    
-    target_day = DAY if DAY is not None else date.today().day
-    target_month = MONTH if MONTH is not None else date.today().month
-    target_year = YEAR if YEAR is not None else date.today().year
     try:
         stock_date = date(day=target_day, month=target_month, year=target_year)
     except ValueError as e:
@@ -130,6 +120,8 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
 
     filename = f"FSRM_consolidated_{stock_date.strftime('%B')}_{stock_date.year}.csv"
     csv_file_path = PROJECT_ROOT / "data" / filename
+    #SP_ROOT / FSRM_FOLDER / "backup_csv" / filename
+    
 
     cache_file_path = PROJECT_ROOT / "data" / f"temp_transformed.parquet"
 
@@ -141,13 +133,15 @@ def run_pipeline(steps: list[str] = ["all"]) -> None:
         df_mapping = extract_sermsuk_TBL_mapping(input_path, sheet_name="warehouse")
 
         df_beer = extract_sfc_data(
-            beer_path, 
+            forecast_path, 
+            sheet_name="BEER",
             columns_to_read=BEER_COLUMNS_TO_READ,
             rename_map=SFC_RENAME_MAPPING 
         )
 
         df_spirits = extract_sfc_data(
-            spirits_path, 
+            forecast_path,
+            sheet_name="Spirits", 
             columns_to_read=SPIRITS_COLUMNS_TO_READ,
             rename_map=SFC_RENAME_MAPPING
         )
@@ -233,6 +227,10 @@ if __name__ == "__main__":
         choices=["all", "transform", "backup", "excel"],
         help="Specify one or more pipeline slices to execute (e.g., --steps backup excel)"
     )
+    parser.add_argument("--day", type=int, default=None, help="Day override (default: today)")
+    parser.add_argument("--month", type=int, default=None, help="Month override (default: today)")
+    parser.add_argument("--year", type=int, default=None, help="Year override (default: today)")
+
     args = parser.parse_args()
     
-    run_pipeline(steps=args.steps)
+    run_pipeline(steps=args.steps, day=args.day, month=args.month, year=args.year)

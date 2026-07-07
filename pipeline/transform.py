@@ -95,7 +95,7 @@ def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFr
     return (
         pl.concat([df_beer, df_spirits])
         .with_columns(
-            pl.col("branch_code").str.split(" ").list.first().cast(pl.Int64)
+            pl.col("branch_code").str.extract(r"(\d+)").cast(pl.Int64)
         )
         .group_by(["SKU", "branch_code", "category"])
         .agg(pl.col("forecast").sum())

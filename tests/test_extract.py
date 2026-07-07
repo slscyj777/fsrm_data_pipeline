@@ -3,18 +3,18 @@ import polars as pl
 from datetime import date
 from pathlib import Path
 from dataclasses import dataclass, field
-from pipeline.extract import extract_sermsuk_data
+from pipeline.extract import extract_sermsuk_data, validate_extracted_data
 
 def create_mock_excel(path: Path, sheet_name: str):
     df = pl.DataFrame({
         "column_1": ["data1", "data2", "", "", "จิง"],
         "column_2": ["val1", "val2", " ", "", ""],
         "column_3": ["val3", "val4", " ", "", ""],
-        "column_4": ["val3", "val4","   ", "", ""],
+        "column_4": ["val3", "val4","   ", None, ""],
         "column_5": ["val3", "val4", "", "", "zzz"],
         "column_6": ["val3", "val4"," ", "", ""],
         "column_7": ["val3", "val4", " ", "", ""],
-        "column_8": ["val3", "val4","", "", "xyz"]
+        "column_8": ["val3", "val4",None, "", "xyz"]
     })
     df.write_excel(path, worksheet=sheet_name)
 
@@ -122,3 +122,22 @@ class TestExtractSermsukData:
             # 2 files * 2 valid rows per mock file = 4 expected rows
             assert result_df.shape == (4, 12)
         #note race condition mem misallocation bug to fix
+
+def create_df_with_null_values() -> pl.DataFrame:
+    data = {
+        "branch_code": ["B01", None, "B03", "B04"],
+        "region": ["North", "South", None, "East"],
+        "sermsuk_branch_name": ["Branch A", "Branch B", "Branch C", None],
+        "SKU": [None, "SKU_99", "SKU_100", "SKU_101"],
+        "base_unit_bottle": [24, 12, None, 24],
+        "stock_case": [100, None, 50, 0],
+        "stock_bottle": [None, 5, 10, 15],
+        "shippment_case": [20, 10, None, 5],
+        "shippment_bottle": [0, None, 12, None],
+    }
+    return pl.DataFrame(data)
+
+class TestValidateExtractedData:
+    def test_extracted_data_with_nulls(self):
+        with pytest.raises(ValueError, match="Null values found in required fields: {'branch_code': 1, 'region': 1, 'sermsuk_branch_name': 1, 'SKU': 1, 'base_unit_bottle': 1, 'stock_case': 1, 'stock_bottle': 1, 'shippment_case': 1, 'shippment_bottle': 2}"):
+            validate_extracted_data(create_df_with_null_values())

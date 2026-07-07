@@ -102,11 +102,12 @@ def extract_sermsuk_TBL_mapping(file_name: Path | str,sheet_name: str) -> pl.Dat
     return df
 
 
-def extract_sfc_data(file_path: str | Path, columns_to_read: list[int], rename_map: dict[str, str])-> pl.DataFrame:
+def extract_sfc_data(file_path: str | Path, sheet_name: str, columns_to_read: list[int], rename_map: dict[str, str])-> pl.DataFrame:
     
     return (
         pl.read_excel(
             file_path,
+            sheet_name=sheet_name,
             engine="calamine",
             columns=columns_to_read,
             has_header=False,
