@@ -9,9 +9,9 @@ def rename_normalize_stock_columns(df: pl.DataFrame
     There were some columns with '-' which caused error when calculating total stock, so we remove those, then change the datatype to a decimal for faster calculation. Rename columns afterwards for readability.
     '''
     df = df.rename(column_mapping).with_columns(
-                pl.col(col).str.strip_chars()
+                pl.col(col).fill_null("0")
+                .str.strip_chars()
                 .replace(["-", "", " "], ["0", "0", "0"])
-                .fill_null("0")
                 .cast(pl.Float64) 
                 for col in stock_columns + ship_columns
     )
