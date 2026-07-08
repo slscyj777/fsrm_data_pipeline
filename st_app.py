@@ -9,7 +9,7 @@ from pathlib import Path
 import streamlit as st
 from pipeline.settings import load_settings, save_settings
 
-from main import run_pipeline
+from main import run_pipeline, month_folder_name
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 ENV_PATH = PROJECT_ROOT / ".env"
@@ -42,21 +42,26 @@ class StreamlitLogger(io.StringIO):
 
 
 st.set_page_config(page_title="FSRM Pipeline", layout="centered")
-st.title("FSRM Data Pipeline")
+st.title("FSRM Daily Pipeline")
 
-with st.expander("⚙️ Settings"):
-    current = load_settings()
-    new_values = {
-        key: st.text_input(key, value=current.get(key, ""), help=help_text)
-        for key, help_text in SETTINGS_FIELDS.items()
-    }
-    if st.button("Save settings"):
-        missing = [key for key, value in new_values.items() if not value]
-        if missing:
-            st.error(f"These fields cannot be empty: {', '.join(missing)}")
-        else:
-            save_settings(new_values)
-            st.success("Success!")
+with st.sidebar:
+    with st.expander("⚙️ Settings"):
+        current = load_settings()
+        new_values = {
+            key: st.text_input(key, value=current.get(key, ""), help=help_text)
+            for key, help_text in SETTINGS_FIELDS.items()
+        }
+        if st.button("Save settings"):
+            missing = [key for key, value in new_values.items() if not value]
+            if missing:
+                st.error(f"These fields cannot be empty: {', '.join(missing)}")
+            else:
+                save_settings(new_values)
+                st.success("Success!")
+
+if "running" not in st.session_state:
+    st.session_state.running = False
+
 
 picked_date = st.date_input("Stock date to process", value=date.today())
 step_choice = st.multiselect(
@@ -66,18 +71,44 @@ step_choice = st.multiselect(
     help="'all' runs everything. Select specific steps to re-run those parts.",
 )
 
-if st.button("Run pipeline", type="primary", disabled=not step_choice):
+st.caption(
+    f"Processing **{picked_date.strftime('%B %d, %Y')}**\n"
+    f"\nFolder: **`{month_folder_name(picked_date.month, picked_date.year)}`**"
+)
+
+run_clicked = st.button(
+    "Run pipeline",
+    type="primary",
+    disabled=st.session_state.running or not step_choice,
+)
+ 
+if run_clicked:
+    st.session_state.running = True
+    st.rerun()
+
+if st.session_state.running:
     with st.status("Running pipeline...", expanded=True) as status:
         log_stream = StreamlitLogger(st.empty())
         try:
             with redirect_stdout(log_stream):
-                run_pipeline(
+                skipped = run_pipeline(
                     steps=step_choice,
                     day=picked_date.day,
                     month=picked_date.month,
                     year=picked_date.year,
                 )
+            if skipped:
+                st.info("Already processed this date — backup skipped, Excel refreshed as usual.")
             status.update(label="Success!", state="complete", expanded=True)
+        except (FileNotFoundError, ValueError) as e:
+            status.update(label="Pipeline failed", state="error", expanded=True)
+            st.error(str(e))
         except Exception:
-            log_stream.write("\n" + traceback.format_exc())
-            status.update(label="Pipeline failed — see log below.", state="error", expanded=True)
+            status.update(label="Pipeline failed — unexpected error", state="error", expanded=True)
+            st.error("Something went wrong. Check stack trace below.")
+            with st.expander("Technical details"):
+                st.code("\n" + traceback.format_exc())
+        finally:
+            st.session_state.running = False
+
+

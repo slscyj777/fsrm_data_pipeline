@@ -17,24 +17,26 @@ def check_duplicate_dates(existing_df: pl.DataFrame, new_df: pl.DataFrame) -> bo
     return has_overlap
 
 
-def check_and_load_to_backup(df: pl.DataFrame, csv_file_path: Path) -> None:
+def check_and_load_to_backup(df: pl.DataFrame, csv_file_path: Path) -> bool:
     '''
     check if csv backup for that month exists, if no, create file and save data, if yes, append data to the end of existing file. if data with the same date already exists, skip saving data to prevent duplicate data
+
+    Returns True if the save was skipped due to a duplicate date, False otherwise.
     '''
 
     if not csv_file_path.exists():
         df.write_csv(csv_file_path, separator=",", float_precision=1)
-    else:
-        existing_dates_df = pl.scan_csv(csv_file_path).select("stock_date").collect()
-        if check_duplicate_dates(existing_dates_df, df):
-            print(f"Data for that date already exists, skipping.")
-            return None
-        else:
-            with open(csv_file_path, mode="a", encoding= "UTF-8") as f:
-                df.write_csv(f, include_header=False, separator=",", float_precision=1)
+        return False 
+    
+    existing_dates_df = pl.scan_csv(csv_file_path).select("stock_date").collect()
+    if check_duplicate_dates(existing_dates_df, df):
+        print(f"Data for that date already exists, skipping.")
+        return True
 
+    with open(csv_file_path, mode="a", encoding= "UTF-8") as f:
+        df.write_csv(f, include_header=False, separator=",", float_precision=1)
 
-    return None
+    return False
 
 
 def load_to_excel(df_pl: pl.DataFrame, output_file: Path, table_name: str):
@@ -75,13 +77,3 @@ def load_to_excel(df_pl: pl.DataFrame, output_file: Path, table_name: str):
 
     return None
 
-if __name__ == "__main__":
-    nrows, ncols = 3, 12
-    df = pd.DataFrame(data=nrows * [ncols * ['test']],
-                columns=['col ' + str(i) for i in range(ncols)])
-    dfl = pl.DataFrame(data=nrows * [ncols * ['hi']],
-                schema=['col ' + str(i) for i in range(ncols)]
-                , orient= "row")
-
-    #load_to_excel(df, table_name = 'Frame0')
-    print('check')

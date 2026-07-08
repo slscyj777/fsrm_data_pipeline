@@ -63,8 +63,11 @@ def step_start(message):
 def step_done(message):
     print(f"\033[K{GREEN}[OK]{RESET} {message}")
 
+def month_folder_name(month: int, year: int) -> str:
+    '''Resolves the SharePoint subfolder name for a given month/year, e.g. "7_Jul_2026".'''
+    return f"{month}_{month_abbr[month]}_{year}"
 
-def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int | None = None, year: int | None = None) -> None:
+def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int | None = None, year: int | None = None) -> bool:
     """
     Initialize all file paths, then run compute steps, followed by saving to a parquet cache, before saving cache to backup csv, reading that updated csv and loading updated data into excel. Each segment broken into arg blocks that can be called by parsing the arg name specified when running the code using --step"
     """
@@ -107,7 +110,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
     except ValueError as e:
         raise ValueError(f"Invalid date combination: day={target_day}, month={target_month}, year={target_year}") from e
 
-    sub_folder = SP_ROOT / SUB_FOLDER_NAME /  f"{target_month}_{month_abbr[target_month]}_{target_year}"
+    sub_folder = SP_ROOT / SUB_FOLDER_NAME /  month_folder_name(target_month, target_year)
     output_path = SP_ROOT / FSRM_FOLDER / OUTPUT_FILE
 
 
@@ -119,6 +122,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
     cache_file_path = PROJECT_ROOT / "data" / f"temp_transformed.parquet"
 
     df = None
+    skipped_backup = False
 
     if "all" in requested_steps or "transform" in requested_steps:
         print(f"Extracting and transforming data from {sub_folder.name}, day: {target_day}")
@@ -187,8 +191,11 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
                 raise FileNotFoundError("Cache missing. Run the 'transform' step first to build cache.")
             df = pl.read_parquet(cache_file_path)
 
-        check_and_load_to_backup(df, csv_file_path=csv_file_path)
-        step_done("Backup updated/skipped successfully.")
+        skipped_backup = check_and_load_to_backup(df, csv_file_path=csv_file_path)
+        if skipped_backup:
+            step_done("Backup skipped successfully.")
+        else:
+            step_done("Backup updated successfully.")
 
 
     if "all" in requested_steps or "excel" in requested_steps:
@@ -208,7 +215,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
     print("----------------------------")
     print(f"Execution time: {end_time - start_time:.2f} seconds")
 
-  
+    return skipped_backup
 
 
 if __name__ == "__main__":

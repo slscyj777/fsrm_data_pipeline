@@ -1,5 +1,15 @@
 TEST_FILE: str = "output.xlsx"
 
+DEFAULTS: dict[str, str] = {
+    "SUB_FOLDER_NAME": "1.Stock FSRM SSC",
+    "FSRM_FOLDER": "FSRM_files",
+    "SP_SYNC_PATH": "Thai Beverage Public Company Limited/Nitita Chaiarsa - Stock FSRM SSC",
+    "MASTER_DIM_FILE": "master_dim.xlsx",
+    "SKU_DIM_FILE": "DIM_SKU.xlsx",
+    "FORECAST_FILE": "FSRM_Beer&Spirits Sales Forecasting_July 2026 (SOP Template).xlsx",
+    "OUTPUT_FILE": "FSRM_consolidated.xlsx",
+}
+
 # -------- column structures & logic  -------------
 COLUMNS_TO_READ: list[int] = [1, 2, 17, 18, 13, 14]
 
