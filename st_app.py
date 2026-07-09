@@ -4,23 +4,25 @@ import traceback
 from contextlib import redirect_stdout
 from datetime import date
 from pathlib import Path
+from st_copy import copy_button
 
 
 import streamlit as st
 from pipeline.settings import load_settings, save_settings
 
 from main import run_pipeline, month_folder_name
+from agent_summary import run_agent_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-ENV_PATH = PROJECT_ROOT / ".env"
+
 
 # label = help text shown next to each field; edit this dict to add/remove fields
 SETTINGS_FIELDS = {
     "SUB_FOLDER_NAME": "SharePoint stock subfolder name",
     "FSRM_FOLDER": "FSRM output folder name",
     "SP_SYNC_PATH": "SharePoint sync path (eg. ******* Public Company Limited/**** **** - Stock FSRM SSC)",
-    "MASTER_DIM_FILE": "Master dimension Excel filename",
-    "SKU_DIM_FILE": "SKU dimension Excel filename",
+    "MASTER_DIM_FILE": "Master dimension Excel filename eg dim.xlsx",
+    "SKU_DIM_FILE": "SKU dimension Excel filename eg sku.xlsx",
     "FORECAST_FILE": "forecast Excel filename",
     "OUTPUT_FILE": "Output Excel filename",
 }
@@ -56,14 +58,16 @@ with st.sidebar:
             if missing:
                 st.error(f"These fields cannot be empty: {', '.join(missing)}")
             else:
-                save_settings(new_values)
+                save_settings(current, new_values)
                 st.success("Success!")
 
 if "running" not in st.session_state:
     st.session_state.running = False
+if "agent_summary" not in st.session_state:
+    st.session_state.agent_summary = False
 
 
-picked_date = st.date_input("Stock date to process", value=date.today())
+picked_date = st.date_input("Stock date", value=date.today())
 step_choice = st.multiselect(
     "Steps to run",
     ["all", "transform", "backup", "excel"],
@@ -91,13 +95,13 @@ if st.session_state.running:
         log_stream = StreamlitLogger(st.empty())
         try:
             with redirect_stdout(log_stream):
-                skipped = run_pipeline(
+                results = run_pipeline(
                     steps=step_choice,
                     day=picked_date.day,
                     month=picked_date.month,
                     year=picked_date.year,
                 )
-            if skipped:
+            if results:
                 st.info("Already processed this date — backup skipped, Excel refreshed as usual.")
             status.update(label="Success!", state="complete", expanded=True)
         except (FileNotFoundError, ValueError) as e:
@@ -112,3 +116,26 @@ if st.session_state.running:
             st.session_state.running = False
 
 
+with st.container(border=True) as c:
+    threshold_pct = st.slider("Shortage threshold (% below forecast)", 5, 100, 30) / 100
+    run_agent = st.button(
+        "Agent summary",
+        type="primary",
+        disabled= not picked_date,
+    )
+
+
+    if run_agent:
+        with st.status("Generating summary...", expanded=True) as status:
+            st.session_state.agent_summary = run_agent_summary(
+                stock_date=picked_date,
+                threshold_pct=threshold_pct
+            )
+            status.update(label="Success!", state="complete", expanded=True)
+
+    # Persistent presentation layer
+    if st.session_state.agent_summary:
+        st.subheader("Replenishment Summary")
+        st.markdown(st.session_state.agent_summary)
+
+        copy_button(st.session_state.agent_summary, tooltip="Copy summary to clipboard")
