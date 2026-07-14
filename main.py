@@ -4,6 +4,7 @@ import argparse
 import polars as pl
 from pathlib import Path
 import time
+import logging
 
 
 # Pipeline Config
@@ -30,17 +31,15 @@ from pipeline.transform import (
 from pipeline.load import check_and_load_to_backup, load_to_excel
 
 
-CYAN = '\033[96m'
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-RESET = '\033[0m'
-BOLD = '\033[1m'
-
-def step_start(message: str):
-    print(f"{YELLOW}[...]{RESET} {message}", end="\r", flush=True)
-
-def step_done(message: str):
-    print(f"\033[K{GREEN}[OK]{RESET} {message}")
+logger = logging.getLogger("pipeline.main")
+ 
+ 
+def step_start(message: str) -> None:
+    logger.info("[...] %s", message)
+ 
+ 
+def step_done(message: str) -> None:
+    logger.info("[OK] %s", message)
 
 def month_folder_name(month: int, year: int) -> str:
     '''Resolves the SharePoint subfolder name for a given month/year, e.g. "7_Jul_2026".'''
@@ -52,7 +51,7 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
     """
     start_time = time.perf_counter()
     requested_steps = set(steps) if steps is not None else {"all"}
-    print(f"\n{BOLD}{CYAN}Starting pipeline (Step: {steps})...{RESET}\n")
+    logger.info(f"\nStarting pipeline (Step: {steps})...\n")
 
   
     PROJECT_ROOT = Path(__file__).resolve().parent
@@ -91,7 +90,7 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
     skipped_backup = False
 
     if "all" in requested_steps or "transform" in requested_steps:
-        print(f"Extracting and transforming data from {sub_folder.name}, day: {target_day}")
+        logger.info(f"Extracting and transforming data from {sub_folder.name}, day: {target_day}")
 
         df_mapping = extract_sermsuk_TBL_mapping(input_path, sheet_name="warehouse")
 
@@ -178,14 +177,15 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
         step_done("Excel file ready.")
 
     end_time = time.perf_counter()
-    print(f"\n{BOLD}{CYAN}success {RESET}")
-    print("----------------------------")
-    print(f"Execution time: {end_time - start_time:.2f} seconds")
+    logger.info(f"\nsuccess")
+    logger.info("----------------------------")
+    logger.info(f"Execution time: {end_time - start_time:.2f} seconds")
 
     return skipped_backup
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="FSRM Data Pipeline Orchestrator")
     parser.add_argument(
         "--steps",  

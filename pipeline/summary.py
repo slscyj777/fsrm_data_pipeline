@@ -56,8 +56,9 @@ def summarize_anomalies(anomalies_df: pl.DataFrame, stock_date: date, max_record
         f"{payload_data}\n\n"
         "Do not hallucinate numbers or data outside this provided dictionary.\n\n"
         "Schema info = {sermsuk_branch_name: name of branch ,region_TBL: region of TBL mapped to the branch , SKU: product code, description: product description, brand: brand of product, category: category of product (beer, spirits, soda),ending_stock_case: ending stock level for the day, forecast: forecasted stocked needed, shortage_pct: percentage below forecast}"
-        "structure report by levels of severity such as 0 stock, high % below forecast etc"
-        "Sample analysis: branch หน่วยปทุมธานี in tbl region R1 has....."
+        "Sample analysis:"
+        f"Replenishment summary for {stock_date}:"
+        "product ____ in branch หน่วยปทุมธานี in tbl region R1 is 80 % below forecast, please check dashboard"
     )
     
     for attempt in range(max_retries + 1):

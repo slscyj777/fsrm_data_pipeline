@@ -2,7 +2,9 @@ import polars as pl
 import xlwings as xw
 import pandas as pd
 from pathlib import Path
+import logging
 
+logger = logging.getLogger(__name__)
 
 def check_duplicate_dates(existing_df: pl.DataFrame, new_df: pl.DataFrame) -> bool:
     '''
@@ -30,7 +32,7 @@ def check_and_load_to_backup(df: pl.DataFrame, csv_file_path: Path) -> bool:
     
     existing_dates_df = pl.scan_csv(csv_file_path).select("stock_date").collect()
     if check_duplicate_dates(existing_dates_df, df):
-        print(f"Data for that date already exists, skipping.")
+        logger.info(f"Data for that date already exists, skipping.")
         return True
 
     with open(csv_file_path, mode="a", encoding= "UTF-8") as f:

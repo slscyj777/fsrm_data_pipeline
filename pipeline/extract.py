@@ -1,6 +1,9 @@
 import polars as pl
 from datetime import date
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_filename_metadata(filename: str) -> tuple[str, str, str]:
@@ -77,14 +80,14 @@ def extract_sermsuk_data(
         cleaned_df = clean_sermsuk_dataframe(raw_df, code, region, branch_name, stock_date)
         
         df_list.append(cleaned_df)
-        print(f"Concatenated file: {file.name}, files in dir: {index}")
+        logger.info("Concatenated file: %s, files in dir: %d", file.name, index)
 
     
     if len(df_list) != files:
         raise ValueError(f"Expected {files} files, found {len(df_list)}. Check folder again.")
 
     final_df = pl.concat(df_list, how="vertical")
-    print(f"{final_df.height} rows extracted")
+    logger.info("%d rows extracted", final_df.height)
     return final_df
 
 

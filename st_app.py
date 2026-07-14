@@ -1,7 +1,5 @@
-import io
-import re
 import traceback
-from contextlib import redirect_stdout
+import logging
 from datetime import date
 from pathlib import Path
 from st_copy import copy_button
@@ -27,20 +25,16 @@ SETTINGS_FIELDS = {
     "OUTPUT_FILE": "Output Excel filename",
 }
 
-ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
-def clean_log(text: str) -> str:
-    return ANSI_RE.sub("", text).replace("\r", "\n")
-
-class StreamlitLogger(io.StringIO):
+class StreamlitHandler(logging.Handler):
     def __init__(self, placeholder):
         super().__init__()
         self.placeholder = placeholder
+        self.lines: list[str] = []
 
-    def write(self, s):
-        super().write(s)
-        self.placeholder.code(clean_log(self.getvalue()), language="text")
-        return len(s)
+    def emit(self, record: logging.LogRecord) -> None:
+        self.lines.append(self.format(record))
+        self.placeholder.code("\n".join(self.lines), language="text")
 
 
 st.set_page_config(page_title="FSRM Pipeline", layout="centered")
@@ -92,15 +86,21 @@ if run_clicked:
 
 if st.session_state.running:
     with st.status("Running pipeline...", expanded=True) as status:
-        log_stream = StreamlitLogger(st.empty())
+        pipeline_logger = logging.getLogger("pipeline")
+        pipeline_logger.setLevel(logging.INFO)
+        pipeline_logger.handlers.clear()          
+        pipeline_logger.propagate = False         # don't also spam the server's console
+
+        handler = StreamlitHandler(st.empty())
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        pipeline_logger.addHandler(handler)
         try:
-            with redirect_stdout(log_stream):
-                results = run_pipeline(
-                    steps=step_choice,
-                    day=picked_date.day,
-                    month=picked_date.month,
-                    year=picked_date.year,
-                )
+            results = run_pipeline(
+                steps=step_choice,
+                day=picked_date.day,
+                month=picked_date.month,
+                year=picked_date.year,
+            )
             if results:
                 st.info("Already processed this date — backup skipped, Excel refreshed as usual.")
             status.update(label="Success!", state="complete", expanded=True)
@@ -115,11 +115,11 @@ if st.session_state.running:
         finally:
             st.session_state.running = False
 
-
+st.subheader("Replenishment Summary", divider="blue")
 with st.container(border=True) as c:
-    threshold_pct = st.slider("Shortage threshold (% below forecast)", 5, 100, 30) / 100
+    threshold_pct = st.slider("Shortage threshold (% below forecast): Sets the cutoff % shortage to focus on", 5, 100, 30) / 100
     run_agent = st.button(
-        "Agent summary",
+        "Run Agent",
         type="primary",
         disabled= not picked_date,
     )
@@ -135,7 +135,7 @@ with st.container(border=True) as c:
 
     # Persistent presentation layer
     if st.session_state.agent_summary:
-        st.subheader("Replenishment Summary")
+  
         st.markdown(st.session_state.agent_summary)
 
         copy_button(st.session_state.agent_summary, tooltip="Copy summary to clipboard")
