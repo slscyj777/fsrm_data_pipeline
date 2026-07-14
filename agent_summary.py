@@ -1,13 +1,16 @@
-import polars as pl
 from pathlib import Path
-from pipeline.summary import agent_workflow
+from agent.workflow import agent_workflow
 from datetime import date
+from functools import cache
+import polars as pl
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+@cache
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent
 
 def get_csv_backup_filepath(stock_date: date) -> Path:
     filename = f"FSRM_consolidated_{stock_date.strftime('%B')}_{stock_date.year}.csv"
-    csv_file_path = PROJECT_ROOT / "data" / filename
+    csv_file_path = _project_root() / "data" / filename
     return csv_file_path
 
 
@@ -19,5 +22,3 @@ def run_agent_summary(stock_date: date, threshold_pct: float):
 
     return summary
 
-
-  
