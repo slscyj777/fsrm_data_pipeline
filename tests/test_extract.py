@@ -48,7 +48,7 @@ test_cases = [
         files_to_create=[],
         files_param_count=1,
         expected_error=ValueError,
-        error_match="Wrong folder name or folder not exists."
+        error_match="Folder not found or not a directory: "
     ),
     SermsukTestCase(
         test_id="error_invalid_filename",
