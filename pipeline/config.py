@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field
 from pathlib import Path
+from functools import cache
 
 class ConfigSchema(BaseModel):
     TEST_FILE: str
-    
+    EXPECTED_BRANCH_FILE_COUNT: int
     # elements inside lists must match the specified inner type
     COLUMNS_TO_READ: list[int] = Field(min_length=1)
     BEER_COLUMNS_TO_READ: list[int]
@@ -26,6 +27,8 @@ class ConfigSchema(BaseModel):
     OUTPUT_FILE: str
 
 
-CONFIG_PATH = Path(__file__).parent.parent / "settings.json"
-# Read the raw file and validate it through the schema
-settings = ConfigSchema.model_validate_json(CONFIG_PATH.read_text(encoding="utf-8"))
+@cache
+def get_settings() -> ConfigSchema:
+    config_path = Path(__file__).parent.parent / "settings.json"
+    return ConfigSchema.model_validate_json(config_path.read_text(encoding="utf-8"))
+#validates dtypes after first call and caches the result 

@@ -1,8 +1,6 @@
 import polars as pl
 from datetime import date
 from pathlib import Path
-from calendar import month_abbr
-#from config import FOLDER_PATH, COLUMNS_TO_READ
 
 
 def _parse_filename_metadata(filename: str) -> tuple[str, str, str]:
@@ -38,6 +36,7 @@ def clean_sermsuk_dataframe(
 
 def extract_sermsuk_data(
     columns_to_read: list[int],
+    *,
     sub_folder: Path,
     stock_date: date, 
     day: int | None = None,
@@ -48,10 +47,7 @@ def extract_sermsuk_data(
 ) -> pl.DataFrame:
     """folder scanning and execution"""
     if not (sub_folder.exists() and sub_folder.is_dir()):
-        print(f"check {sub_folder}")
-        print(f"Folder exists: {sub_folder.exists()}")
-        print(f"Is directory: {sub_folder.is_dir()}")
-        raise ValueError("Wrong folder name or folder not exists.")
+        raise ValueError(f"Folder not found or not a directory: {sub_folder}")
 
     df_list = []
     

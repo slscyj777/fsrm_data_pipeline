@@ -1,5 +1,6 @@
 {
     "TEST_FILE": "output.xlsx",
+    "EXPECTED_BRANCH_FILE_COUNT": 50,
     "COLUMNS_TO_READ": [
         1,
         2,

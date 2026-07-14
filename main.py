@@ -7,7 +7,7 @@ import time
 
 
 # Pipeline Config
-from pipeline.config import settings
+from pipeline.config import get_settings
 # stages
 from pipeline.extract import (
     extract_sfc_data,
@@ -46,12 +46,12 @@ def month_folder_name(month: int, year: int) -> str:
     '''Resolves the SharePoint subfolder name for a given month/year, e.g. "7_Jul_2026".'''
     return f"{month}_{month_abbr[month]}_{year}"
 
-def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int | None = None, year: int | None = None) -> bool:
+def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: int | None = None, year: int | None = None) -> bool:
     """
     Initialize all file paths, then run compute steps, followed by saving to a parquet cache, before saving cache to backup csv, reading that updated csv and loading updated data into excel. Each segment broken into arg blocks that can be called by parsing the arg name specified when running the code using --step"
     """
     start_time = time.perf_counter()
-    requested_steps = set(steps)
+    requested_steps = set(steps) if steps is not None else {"all"}
     print(f"\n{BOLD}{CYAN}Starting pipeline (Step: {steps})...{RESET}\n")
 
   
@@ -61,6 +61,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
     target_day = day if day is not None else date.today().day
     target_month = month if month is not None else date.today().month
     target_year = year if year is not None else date.today().year
+    settings = get_settings()
 
     input_path = PROJECT_ROOT / "excel" / "input" / settings.MASTER_DIM_FILE
     forecast_path = PROJECT_ROOT / "excel" / "input" / settings.FORECAST_FILE
@@ -120,6 +121,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
         df = (extract_sermsuk_data(
                     columns_to_read = settings.COLUMNS_TO_READ
                     ,sub_folder= sub_folder
+                    ,files=settings.EXPECTED_BRANCH_FILE_COUNT
                     ,day = target_day
                     ,stock_date=stock_date
                     ,rows_to_read= 180

@@ -3,12 +3,18 @@ import time
 from datetime import date
 from dotenv import load_dotenv
 from pathlib import Path
+from functools import cache
 import polars as pl
 import requests
 
  
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-load_dotenv( PROJECT_ROOT / ".env", override= True) 
+@cache
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+@cache
+def _load_env() -> None:
+    load_dotenv(_project_root() / ".env", override=True)
 
 def flag_anomalies(df: pl.DataFrame, threshold_pct: float) -> pl.DataFrame:
     '''
@@ -36,6 +42,7 @@ GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_M
 
 def summarize_anomalies(anomalies_df: pl.DataFrame, stock_date: date, max_records: int = 500, max_retries: int = 2) -> str:
     """Sends top flagged shortage rows to Gemini for a plain-language executive briefing."""
+    _load_env()
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return "No summary generated: GEMINI_API_KEY not set in .env"
