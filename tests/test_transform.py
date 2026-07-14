@@ -1,6 +1,7 @@
 import pytest
 import polars as pl
 from dataclasses import dataclass, field
+from math import ceil
 from pipeline.transform import (
     branch_code_to_int,
     map_base_unit_to_sku,
@@ -88,7 +89,7 @@ class TestTransformConsolidateForecasts:
         assert result["branch_code"][0] == test_case.expected_branch_code
         assert result["branch_code"].dtype == pl.Int64
             
-    def test_transform_consolidate_forecasts_sums_matching_groups(self):
+    def test_transform_consolidate_forecasts_sums_matching_groups(self, normalize: float = 1.2):
         df_beer = pl.DataFrame({
             "branch_code": ["3202 Bangkok"],
             "category": ["soda"],
@@ -102,7 +103,8 @@ class TestTransformConsolidateForecasts:
             "forecast": [5.0],
         })
     
-        result = transform_consolidate_forecasts(df_beer, df_spirits)
+        result = transform_consolidate_forecasts(df_beer, df_spirits, normalize)
 
-        assert result["forecast"][0] == 15.0
+        assert result["forecast"][0] == ceil(round(15.0 / normalize, 10))
         assert result.height == 1
+        assert result["forecast"].dtype == pl.Int64

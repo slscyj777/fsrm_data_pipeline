@@ -90,7 +90,7 @@ def rearrange_columns(df: pl.DataFrame, column_order: list[str]) -> pl.DataFrame
         )
 
     
-def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFrame) -> pl.DataFrame:
+def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFrame, normalize: float = 1) -> pl.DataFrame:
     """gets branch code and combines beer and spirits metrics and groups same fields."""
     return (
         pl.concat([df_beer, df_spirits])
@@ -99,7 +99,13 @@ def transform_consolidate_forecasts(df_beer: pl.DataFrame, df_spirits: pl.DataFr
         )
         .group_by(["SKU", "branch_code", "category"])
         .agg(pl.col("forecast").sum())
-    )
+        .with_columns(
+            (pl.col("forecast") / normalize)
+            .round(10)
+            .ceil()
+            .cast(pl.Int64)
+        
+    ))
 
 def branch_code_to_int(df: pl.DataFrame)-> pl.DataFrame:
 

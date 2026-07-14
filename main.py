@@ -36,10 +36,10 @@ YELLOW = '\033[93m'
 RESET = '\033[0m'
 BOLD = '\033[1m'
 
-def step_start(message):
+def step_start(message: str):
     print(f"{YELLOW}[...]{RESET} {message}", end="\r", flush=True)
 
-def step_done(message):
+def step_done(message: str):
     print(f"\033[K{GREEN}[OK]{RESET} {message}")
 
 def month_folder_name(month: int, year: int) -> str:
@@ -115,7 +115,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
             sheet_name="DIM_SKU (DZ_CS)"
         )
 
-        df_SFC = transform_consolidate_forecasts(df_beer, df_spirits)
+        df_SFC = transform_consolidate_forecasts(df_beer, df_spirits, normalize= 1)
 
         df = (extract_sermsuk_data(
                     columns_to_read = settings.COLUMNS_TO_READ
@@ -158,7 +158,7 @@ def run_pipeline(steps: list[str] = ["all"], day: int | None = None, month: int 
 
         skipped_backup = check_and_load_to_backup(df, csv_file_path=csv_file_path)
         if skipped_backup:
-            step_done("Backup skipped successfully.")
+            step_done("Backup skipped, already saved.")
         else:
             step_done("Backup updated successfully.")
 
