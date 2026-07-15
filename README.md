@@ -11,7 +11,7 @@ Every day, this tool:
 2. Cleans and consolidates them into one dataset.
 3. Saves a backup CSV (split per month) so no data is lost.
 4. Pushes the final table into the shared `FSRM_consolidated.xlsx` Excel file.
-5. (Optional) Uses AI to fetch and write a plain-language summary of branches/SKUs that are most short on stock, so you don't have to scan the whole sheet manually.
+5. (Optional) Uses AI to fetch and write a plain-language summary of branches/SKUs that are most short on stock and suggest a replenishment plan.
 
 You can run all of this through the browser UI or directly in the CLI.
 
@@ -150,7 +150,7 @@ uv run main.py --steps excel
 2. ทำความสะอาดและรวมข้อมูลเป็นชุดเดียว
 3. บันทึกไฟล์ CSV สำรอง (แยกไฟล์ตามเดือน) เพื่อไม่ให้ข้อมูลสูญหาย
 4. นำข้อมูลสุดท้ายเข้าสู่ไฟล์ Excel กลาง `FSRM_consolidated.xlsx`
-5. (ทางเลือก) ใช้ AI ดึงและเขียนสรุปภาษาที่เข้าใจง่ายว่าสาขา/SKU ใดขาดสต็อกมากที่สุด เพื่อไม่ต้องไล่ดูทั้งชีตเอง
+5. (ไม่บังคับ) ใช้ AI ในการดึงข้อมูลและเขียนสรุปเป็นภาษาที่เข้าใจง่ายเกี่ยวกับสาขา/SKU ที่ขาดสต็อกมากที่สุดและเสนอแผนการเติมสต็อก
 
 คุณสามารถรันทุกขั้นตอนผ่านหน้าจอเบราว์เซอร์ (UI) หรือรันตรงผ่าน CLI ก็ได้ตามต้องการ
 
