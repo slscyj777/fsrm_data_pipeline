@@ -5,15 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "dagster>=1.13.12",
-    "dagster-dg-cli>=1.13.12",
-    "dagster-webserver>=1.13.12",
     "dotenv>=0.9.9",
     "fastexcel>=0.20.2",
     "numpy>=2.4.6",
     "pandas>=3.0.3",
     "polars>=1.41.2",
     "pyarrow>=24.0.0",
+    "pydantic>=2.13.4",
     "pytest>=9.1.1",
     "python-calamine>=0.6.2",
     "requests>=2.34.2",
