@@ -9,6 +9,7 @@ import logging
 
 # Pipeline Config
 from pipeline.config import get_settings
+from pipeline.paths import sp_root, validate_sp_root, csv_backup_filepath
 # stages
 from pipeline.extract import (
     extract_sfc_data,
@@ -65,11 +66,8 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
     input_path = PROJECT_ROOT / "excel" / "input" / settings.MASTER_DIM_FILE
     forecast_path = PROJECT_ROOT / "excel" / "input" / settings.FORECAST_FILE
     sku_path = PROJECT_ROOT / "excel" / "input" / settings.SKU_DIM_FILE
-    SP_ROOT = Path.home() / settings.SP_SYNC_PATH
+    SP_ROOT = validate_sp_root(sp_root())
 
-    if not SP_ROOT.exists():
-        raise FileNotFoundError(f"SharePoint sync directory not found at: {SP_ROOT}\nEnsure folder is synced.")
-    
     try:
         stock_date = date(day=target_day, month=target_month, year=target_year)
     except ValueError as e:
@@ -79,8 +77,7 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
     output_path = SP_ROOT / settings.FSRM_FOLDER / settings.OUTPUT_FILE
 
 
-    filename = f"FSRM_consolidated_{stock_date.strftime('%B')}_{stock_date.year}.csv"
-    csv_file_path = SP_ROOT / settings.FSRM_FOLDER / "backup_csv" / filename
+    csv_file_path = csv_backup_filepath(stock_date, root=SP_ROOT)
     #PROJECT_ROOT / "data" / filename
     
     
