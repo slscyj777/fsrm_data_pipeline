@@ -80,8 +80,9 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
 
 
     filename = f"FSRM_consolidated_{stock_date.strftime('%B')}_{stock_date.year}.csv"
-    csv_file_path = PROJECT_ROOT / "data" / filename
-    #SP_ROOT / FSRM_FOLDER / "backup_csv" / filename
+    csv_file_path = SP_ROOT / settings.FSRM_FOLDER / "backup_csv" / filename
+    #PROJECT_ROOT / "data" / filename
+    
     
 
     cache_file_path = PROJECT_ROOT / "data" / f"temp_transformed.parquet"
