@@ -135,19 +135,26 @@ def extract_sku_data(file_path: str | Path, columns_to_read: list[int], rename_m
 
 
 def validate_extracted_data(df: pl.DataFrame) -> pl.DataFrame:
-
-    '''This function does some checks to make sure that there are no empty cells in some of the columns that are supposed to have values. Able to add more checks in the future'''
+    '''Checks required columns for nulls; reports affected branch_codes for debugging.'''
 
     if df.height == 0:
         raise ValueError("Extracted DataFrame is empty")
 
+    required_cols = [
+        "branch_code", "region", "sermsuk_branch_name", "SKU", "base_unit_bottle",
+        "stock_case", "stock_bottle", "shippment_case", "shippment_bottle"
+    ]
+
     null_violations = {
-        col: df.filter(pl.col(col).is_null()).height
-        for col in ["branch_code", "region", "sermsuk_branch_name", "SKU", "base_unit_bottle", "stock_case", "stock_bottle", "shippment_case", "shippment_bottle"]
+        col: {"count": bad.height, "branch_codes": bad.get_column("branch_code").unique().to_list()}
+        for col in required_cols
+        if (bad := df.filter(pl.col(col).is_null())).height > 0
     }
-    null_violations = {col: rows for col, rows in null_violations.items() if rows > 0}
+
     if null_violations:
         raise ValueError(f"Null values found in required fields: {null_violations}")
+
+    return df
     
     return df
 

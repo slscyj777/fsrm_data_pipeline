@@ -121,7 +121,7 @@ class TestExtractSermsukData:
  
             # 2 files * 2 valid rows per mock file = 4 expected rows
             assert result_df.shape == (4, 12)
-        #note race condition mem misallocation bug to fix
+        
 
 def create_df_with_null_values() -> pl.DataFrame:
     data = {
@@ -139,5 +139,11 @@ def create_df_with_null_values() -> pl.DataFrame:
 
 class TestValidateExtractedData:
     def test_extracted_data_with_nulls(self):
-        with pytest.raises(ValueError, match="Null values found in required fields: {'branch_code': 1, 'region': 1, 'sermsuk_branch_name': 1, 'SKU': 1, 'base_unit_bottle': 1, 'stock_case': 1, 'stock_bottle': 1, 'shippment_case': 1, 'shippment_bottle': 2}"):
+        with pytest.raises(ValueError, match="Null values found in required fields:"):
             validate_extracted_data(create_df_with_null_values())
+
+    def test_extracted_data_reports_branch_codes(self):
+        try:
+            validate_extracted_data(create_df_with_null_values())
+        except ValueError as e:
+            assert "B04" in str(e)  # shippment_bottle null row belongs to B04
