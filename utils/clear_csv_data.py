@@ -1,8 +1,10 @@
+""" paste uv run python -m utils.clear_csv_data into terminal """
+
 import polars as pl
 from datetime import date
 from pipeline.paths import sp_root, validate_sp_root, csv_backup_filepath
 
-unique_days: list[int] = [21]
+unique_days: list[int] = [22]
 target_month: int = 7 
 target_year: int = 2026
 #if target_month is not None else today.month
