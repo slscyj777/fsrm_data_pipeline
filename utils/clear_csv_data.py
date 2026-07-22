@@ -1,15 +1,20 @@
 import polars as pl
 from datetime import date
+from pipeline.paths import sp_root, validate_sp_root, csv_backup_filepath
 
-unique_days = [10,11,12,13]
-target_month = 7 
-target_year = 2026
+unique_days: list[int] = [21]
+target_month: int = 7 
+target_year: int = 2026
 #if target_month is not None else today.month
-month_name = date(target_year, target_month, 1).strftime('%B')
+target_file_date = date(target_year, target_month, 1)
+
+SP_ROOT = validate_sp_root(sp_root())
+csv_file_path = csv_backup_filepath(stock_date=target_file_date, root=SP_ROOT)
+
 df = pl.read_csv(
-    f"data/FSRM_consolidated_{month_name}_{target_year}.csv", 
+    csv_file_path, 
     schema_overrides={"stock_date": pl.Date,}
-)
+) 
 
 for day in unique_days:
     target_date = date(target_year, target_month, day)
@@ -18,4 +23,5 @@ for day in unique_days:
 
     df = df.filter(pl.col("stock_date") != target_date)
 
-    df.write_csv(f"data/FSRM_consolidated_{target_date.strftime('%B')}_{target_year}.csv")
+
+df.write_csv(csv_file_path)
