@@ -1,4 +1,4 @@
-"""Delete or restore rows for specific stock dates in the monthly CSV backup(s) on SharePoint.
+"""Delete or restore rows for specific stock dates in the monthly CSV backup(s) on SharePoint. Lock and bak files created in same backup_csv folder
 
 Usage:
     uv run utils/clear_csv_data.py --dates 2026-07-21 2026-07-22

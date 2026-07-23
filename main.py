@@ -113,7 +113,7 @@ def run_pipeline(steps: list[str] | None = None, day: int | None = None, month: 
             sheet_name="DIM_SKU (DZ_CS)"
         )
 
-        df_SFC = transform_consolidate_forecasts(df_beer, df_spirits, normalize= 1)
+        df_SFC = transform_consolidate_forecasts(df_beer, df_spirits, normalize= 2)
 
         df = (extract_sermsuk_data(
                     columns_to_read = settings.COLUMNS_TO_READ
