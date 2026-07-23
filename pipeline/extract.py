@@ -2,6 +2,7 @@ import polars as pl
 from datetime import date
 from pathlib import Path
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -37,59 +38,78 @@ def clean_sermsuk_dataframe(
           )
     )
 
+def _read_and_clean_branch_file(
+    file: Path,
+    *,
+    day: int,
+    columns_to_read: list[int],
+    rows_to_read: int,
+    rows_to_skip: int,
+    has_header: bool,
+    schema_overrides: dict,
+    stock_date: date,
+) -> pl.DataFrame:
+    """Worker: reads + cleans one branch file. Isolated thread."""
+    code, region, branch_name = _parse_filename_metadata(file.stem)
+
+    raw_df = pl.read_excel(
+        file,
+        sheet_name=str(day),
+        engine='calamine',
+        columns=columns_to_read,
+        read_options={"n_rows": rows_to_read, "skip_rows": rows_to_skip},
+        drop_empty_cols=False,
+        drop_empty_rows=False,
+        has_header=has_header,
+        schema_overrides=schema_overrides
+    )
+
+    return clean_sermsuk_dataframe(raw_df, code, region, branch_name, stock_date)
+
+
 def extract_sermsuk_data(
     columns_to_read: list[int],
     *,
     sub_folder: Path,
-    stock_date: date, 
-    day: int | None = None,
+    stock_date: date,
+    day: int ,
     rows_to_read: int = 80,
     rows_to_skip: int = 5,
     files: int = 50,
-    has_header: bool = False
+    has_header: bool = False,
+    max_workers: int = 8,
 ) -> pl.DataFrame:
     """folder scanning and execution"""
     if not (sub_folder.exists() and sub_folder.is_dir()):
         raise ValueError(f"Folder not found or not a directory: {sub_folder}")
 
-    df_list = []
-    
-    
     schema_overrides = {f"column_{i+1}": pl.String for i in range(len(columns_to_read))}
 
-    for index, file in enumerate(sub_folder.iterdir(), start=1):
-        if not file.is_file() or not file.name.endswith(".xlsx") or not file.name.startswith("3"):
-            continue
-            
-        
-        code, region, branch_name = _parse_filename_metadata(file.stem)
-        
-        raw_df = pl.read_excel(
-            file,
-            sheet_name=str(day),
-            engine='calamine',
-            columns=columns_to_read,
-            read_options={"n_rows": rows_to_read, "skip_rows": rows_to_skip},
-            drop_empty_cols=False,
-            drop_empty_rows=False,
-            has_header=has_header,
-            schema_overrides=schema_overrides
-        )
-        
-        
-        cleaned_df = clean_sermsuk_dataframe(raw_df, code, region, branch_name, stock_date)
-        
-        df_list.append(cleaned_df)
+    valid_files = [
+        f for f in sub_folder.iterdir()
+        if f.is_file() and f.name.endswith(".xlsx") and f.name.startswith("3")
+    ]
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        df_list = list(executor.map(
+            lambda f: _read_and_clean_branch_file(
+                f, day=day, columns_to_read=columns_to_read,
+                rows_to_read=rows_to_read, rows_to_skip=rows_to_skip,
+                has_header=has_header, schema_overrides=schema_overrides,
+                stock_date=stock_date,
+            ),
+            valid_files,
+        ))
+
+    for index, file in enumerate(valid_files, start=1):
         logger.info("Concatenated file: %s, files in dir: %d", file.name, index)
 
-    
     if len(df_list) != files:
         raise ValueError(f"Expected {files} files, found {len(df_list)}. Check folder again.")
 
     final_df = pl.concat(df_list, how="vertical")
     logger.info("%d rows extracted", final_df.height)
     return final_df
-
 
 def extract_sermsuk_TBL_mapping(file_name: Path | str,sheet_name: str) -> pl.DataFrame:
 
@@ -154,8 +174,6 @@ def validate_extracted_data(df: pl.DataFrame) -> pl.DataFrame:
     if null_violations:
         raise ValueError(f"Null values found in required fields: {null_violations}")
 
-    return df
-    
     return df
 
 
